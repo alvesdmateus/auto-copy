@@ -15,7 +15,7 @@ interface ToneSelectorProps {
 export function ToneSelector({ selectedTone, onSelect }: ToneSelectorProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         Tone/Style
       </label>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -28,12 +28,16 @@ export function ToneSelector({ selectedTone, onSelect }: ToneSelectorProps) {
             }
             className={`p-3 text-left rounded-lg border transition-colors ${
               selectedTone === tone.value
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
           >
-            <div className="font-medium text-sm">{tone.label}</div>
-            <div className="text-xs text-gray-500">{tone.description}</div>
+            <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
+              {tone.label}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {tone.description}
+            </div>
           </button>
         ))}
       </div>

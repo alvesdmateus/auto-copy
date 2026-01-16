@@ -60,23 +60,23 @@ export function HistoryPanel({ onSelectHistory, refreshTrigger }: HistoryPanelPr
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">History</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">History</h2>
         <div className="space-y-2">
           <input
             type="text"
             placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           />
-          <label className="flex items-center gap-2 text-sm text-gray-600">
+          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
             <input
               type="checkbox"
               checked={favoritesOnly}
               onChange={(e) => setFavoritesOnly(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-gray-300 dark:border-gray-600"
             />
             Favorites only
           </label>
@@ -85,25 +85,32 @@ export function HistoryPanel({ onSelectHistory, refreshTrigger }: HistoryPanelPr
 
       <div className="max-h-[400px] overflow-y-auto">
         {loading ? (
-          <div className="p-4 text-center text-gray-500">Loading...</div>
+          <div className="p-4 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse">
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+              </div>
+            ))}
+          </div>
         ) : history.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">No history yet</div>
+          <div className="p-4 text-center text-gray-500 dark:text-gray-400">No history yet</div>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
             {history.map((item) => (
-              <li key={item.id} className="p-3 hover:bg-gray-50">
+              <li key={item.id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 <div className="flex items-start justify-between gap-2">
                   <button
                     onClick={() => onSelectHistory?.(item)}
                     className="flex-1 text-left"
                   >
-                    <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">
                       {item.prompt}
                     </p>
-                    <p className="text-xs text-gray-500 line-clamp-2 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
                       {item.output}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                       {new Date(item.created_at).toLocaleDateString()}
                     </p>
                   </button>

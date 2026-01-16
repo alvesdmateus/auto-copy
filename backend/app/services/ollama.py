@@ -74,6 +74,53 @@ class OllamaService:
 
         return "\n\n".join(prompt_parts)
 
+    def build_variation_prompt(
+        self,
+        user_input: str,
+        variation_num: int,
+        template: str | None = None,
+        tone: str | None = None,
+    ) -> str:
+        """Build prompt for generating a unique variation."""
+        prompt_parts = [
+            f"Generate variation #{variation_num} of marketing copy.",
+            "Make this version distinctly different from others while keeping the same intent.",
+        ]
+
+        if template:
+            prompt_parts.append(f"Template: {template}")
+
+        if tone:
+            tone_instructions = {
+                "professional": "Write in a professional, formal tone.",
+                "casual": "Write in a casual, friendly tone.",
+                "persuasive": "Write in a persuasive, sales-oriented tone.",
+                "informative": "Write in an informative, educational tone.",
+                "urgent": "Write with urgency and FOMO.",
+                "inspirational": "Write in an inspirational, motivational tone.",
+            }
+            prompt_parts.append(tone_instructions.get(tone, f"Tone: {tone}"))
+
+        prompt_parts.append(f"Topic/Product: {user_input}")
+        prompt_parts.append("Generate the copy now:")
+
+        return "\n\n".join(prompt_parts)
+
+    def build_refine_prompt(self, text: str, action: str) -> str:
+        """Build prompt for refining existing copy."""
+        action_prompts = {
+            "improve": "Improve this copy to make it more engaging, compelling, and effective. Keep the same general message but enhance the writing quality.",
+            "shorten": "Make this copy more concise. Remove unnecessary words and tighten the message while keeping the core meaning intact. Aim for at least 30% shorter.",
+            "lengthen": "Expand this copy with more details, examples, or emotional appeal. Make it more comprehensive while keeping it engaging.",
+            "punchier": "Make this copy punchier and more impactful. Use stronger verbs, shorter sentences, and more dynamic language. Add urgency.",
+            "formal": "Rewrite this copy in a more formal, professional tone. Use proper business language while keeping the message clear.",
+            "casual": "Rewrite this copy in a more casual, conversational tone. Make it feel friendly and approachable.",
+        }
+
+        instruction = action_prompts.get(action, f"Refine this copy to be more {action}.")
+
+        return f"{instruction}\n\nOriginal copy:\n{text}\n\nRefined copy:"
+
 
 def get_ollama_service() -> OllamaService:
     return OllamaService()

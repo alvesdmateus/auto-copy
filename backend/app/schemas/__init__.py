@@ -4,6 +4,9 @@ from app.schemas.generation import (
     GenerationHistory,
     TemplateCreate,
     TemplateResponse,
+    VariationsRequest,
+    RefineRequest,
+    RefineAction,
 )
 
 __all__ = [
@@ -12,4 +15,7 @@ __all__ = [
     "GenerationHistory",
     "TemplateCreate",
     "TemplateResponse",
+    "VariationsRequest",
+    "RefineRequest",
+    "RefineAction",
 ]
