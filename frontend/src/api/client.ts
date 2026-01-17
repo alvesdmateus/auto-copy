@@ -954,3 +954,173 @@ export async function organizeGeneration(
   if (!response.ok) throw new Error('Failed to organize generation');
   return response.json();
 }
+
+// ============ Content Types ============
+
+// Long-form content
+export interface OutlineSection {
+  title: string;
+  key_points: string[];
+}
+
+export interface LongFormRequest {
+  topic: string;
+  content_type?: string; // blog_post, article, guide, tutorial
+  target_audience?: string;
+  word_count?: number;
+  tone?: string;
+  keywords?: string[];
+  outline?: OutlineSection[];
+  brand_id?: number;
+  persona_id?: number;
+}
+
+export interface LongFormOutline {
+  title: string;
+  introduction: string;
+  sections: OutlineSection[];
+  conclusion: string;
+  estimated_word_count: number;
+}
+
+// Email sequences
+export type EmailType = 'welcome' | 'nurture' | 'sales' | 'onboarding' | 're_engagement' | 'abandoned_cart';
+
+export interface EmailSequenceRequest {
+  sequence_type: EmailType;
+  product_or_service: string;
+  target_audience?: string;
+  email_count?: number;
+  days_between?: number;
+  tone?: string;
+  key_benefits?: string[];
+  call_to_action?: string;
+  brand_id?: number;
+  persona_id?: number;
+}
+
+// Ad campaigns
+export type AdPlatform = 'google' | 'facebook' | 'instagram' | 'linkedin' | 'twitter' | 'tiktok';
+
+export interface AdCampaignRequest {
+  platform: AdPlatform;
+  product_or_service: string;
+  target_audience?: string;
+  campaign_goal?: string;
+  key_benefits?: string[];
+  offer?: string;
+  variations?: number;
+  tone?: string;
+  brand_id?: number;
+  persona_id?: number;
+}
+
+// SEO content
+export interface SEOContentRequest {
+  page_url?: string;
+  page_topic: string;
+  target_keywords: string[];
+  page_type?: string; // landing, blog, product, service, about
+  brand_id?: number;
+}
+
+// Landing page
+export interface LandingPageRequest {
+  product_or_service: string;
+  target_audience?: string;
+  unique_value_proposition?: string;
+  key_features?: string[];
+  pain_points?: string[];
+  testimonials_count?: number;
+  faq_count?: number;
+  tone?: string;
+  brand_id?: number;
+  persona_id?: number;
+}
+
+// Video scripts
+export type VideoType = 'tiktok' | 'youtube_short' | 'instagram_reel' | 'youtube_long' | 'explainer' | 'testimonial';
+
+export interface VideoScriptRequest {
+  video_type: VideoType;
+  topic: string;
+  target_audience?: string;
+  duration_seconds?: number;
+  key_message?: string;
+  call_to_action?: string;
+  tone?: string;
+  brand_id?: number;
+  persona_id?: number;
+}
+
+// ============ Content API ============
+
+export async function generateLongFormOutline(request: LongFormRequest): Promise<LongFormOutline> {
+  const response = await fetch(`${API_BASE}/content/long-form/outline`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to generate outline');
+  return response.json();
+}
+
+export async function* generateLongFormStream(request: LongFormRequest): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/content/long-form/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to generate long-form content');
+  yield* streamResponse(response);
+}
+
+export async function* generateEmailSequenceStream(request: EmailSequenceRequest): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/content/email-sequence`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to generate email sequence');
+  yield* streamResponse(response);
+}
+
+export async function* generateAdCampaignStream(request: AdCampaignRequest): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/content/ad-campaign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to generate ad campaign');
+  yield* streamResponse(response);
+}
+
+export async function* generateSEOContentStream(request: SEOContentRequest): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/content/seo-content`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to generate SEO content');
+  yield* streamResponse(response);
+}
+
+export async function* generateLandingPageStream(request: LandingPageRequest): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/content/landing-page`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to generate landing page copy');
+  yield* streamResponse(response);
+}
+
+export async function* generateVideoScriptStream(request: VideoScriptRequest): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/content/video-script`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to generate video script');
+  yield* streamResponse(response);
+}
