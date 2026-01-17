@@ -8,6 +8,7 @@ import {
   StyleViolation,
   checkStyle,
 } from '../api/client';
+import { ContentAnalytics } from './ContentAnalytics';
 
 interface OutputDisplayProps {
   output: string;
@@ -16,6 +17,7 @@ interface OutputDisplayProps {
   onRefine?: (action: RefineAction) => void;
   isRefining?: boolean;
   brandId?: number | null;
+  showAnalytics?: boolean;
 }
 
 const REFINE_ACTIONS: { action: RefineAction; label: string; icon: string }[] = [
@@ -34,12 +36,14 @@ export function OutputDisplay({
   onRefine,
   isRefining,
   brandId,
+  showAnalytics = true,
 }: OutputDisplayProps) {
   const [copied, setCopied] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [styleViolations, setStyleViolations] = useState<StyleViolation[]>([]);
   const [styleScore, setStyleScore] = useState<number | null>(null);
   const [showViolations, setShowViolations] = useState(true);
+  const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
 
   const { chars, words } = useMemo(() => countText(output), [output]);
 
@@ -296,6 +300,17 @@ export function OutputDisplay({
             </ul>
           )}
         </div>
+      )}
+
+      {/* Content Analytics */}
+      {output && !isLoading && showAnalytics && (
+        <ContentAnalytics
+          text={output}
+          contentType={selectedPlatform ? 'social' : 'general'}
+          platform={selectedPlatform?.toLowerCase()}
+          isExpanded={analyticsExpanded}
+          onToggle={() => setAnalyticsExpanded(!analyticsExpanded)}
+        />
       )}
 
       {/* Refine actions */}

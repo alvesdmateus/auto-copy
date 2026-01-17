@@ -1124,3 +1124,278 @@ export async function* generateVideoScriptStream(request: VideoScriptRequest): A
   if (!response.ok) throw new Error('Failed to generate video script');
   yield* streamResponse(response);
 }
+
+// ============ Analytics Types ============
+
+export interface ReadabilityMetrics {
+  flesch_reading_ease: number;
+  flesch_kincaid_grade: number;
+  gunning_fog: number;
+  smog_index: number;
+  automated_readability_index: number;
+  coleman_liau_index: number;
+  avg_grade_level: number;
+  reading_time_seconds: number;
+  word_count: number;
+  sentence_count: number;
+  paragraph_count: number;
+  avg_words_per_sentence: number;
+  avg_syllables_per_word: number;
+  difficulty_level: string;
+  target_audience: string;
+}
+
+export interface EmotionScore {
+  emotion: string;
+  score: number;
+}
+
+export interface SentimentAnalysis {
+  overall_sentiment: 'positive' | 'negative' | 'neutral' | 'mixed';
+  sentiment_score: number;
+  confidence: number;
+  emotions: EmotionScore[];
+  is_urgent: boolean;
+  is_persuasive: boolean;
+  is_informative: boolean;
+  is_casual: boolean;
+  is_formal: boolean;
+  call_to_action_strength: number;
+  emotional_appeal: number;
+}
+
+export interface KeywordAnalysis {
+  keyword: string;
+  count: number;
+  density: number;
+  in_title: boolean;
+  in_headings: boolean;
+  in_first_paragraph: boolean;
+}
+
+export interface HeadingStructure {
+  tag: string;
+  text: string;
+  word_count: number;
+}
+
+export interface SEOAnalysis {
+  seo_score: number;
+  word_count: number;
+  ideal_word_count_range: string;
+  keywords: KeywordAnalysis[];
+  keyword_stuffing_warning: boolean;
+  headings: HeadingStructure[];
+  has_h1: boolean;
+  heading_hierarchy_valid: boolean;
+  paragraph_count: number;
+  avg_paragraph_length: number;
+  short_paragraphs_ratio: number;
+  suggestions: string[];
+}
+
+export interface EngagementPrediction {
+  overall_score: number;
+  headline_score: number;
+  hook_score: number;
+  readability_score: number;
+  emotional_score: number;
+  cta_score: number;
+  predicted_click_rate: string;
+  predicted_read_completion: number;
+  predicted_share_likelihood: string;
+  strengths: string[];
+  improvements: string[];
+}
+
+export interface FullAnalysis {
+  readability: ReadabilityMetrics;
+  sentiment: SentimentAnalysis;
+  seo: SEOAnalysis;
+  engagement: EngagementPrediction;
+}
+
+export interface TemplateUsageStats {
+  template_id: number;
+  template_name: string;
+  usage_count: number;
+  last_used?: string;
+  avg_output_length: number;
+  favorite_rate: number;
+}
+
+export interface GenerationStats {
+  total_generations: number;
+  generations_today: number;
+  generations_this_week: number;
+  generations_this_month: number;
+  avg_generations_per_day: number;
+  peak_hour?: number;
+  peak_day?: string;
+  generations_by_tone: Record<string, number>;
+  generations_by_template: Record<string, number>;
+  total_favorites: number;
+  favorite_rate: number;
+  avg_output_length: number;
+}
+
+export interface UsageAnalytics {
+  generation_stats: GenerationStats;
+  top_templates: TemplateUsageStats[];
+  recent_activity: Array<{
+    id: number;
+    prompt: string;
+    created_at: string;
+    is_favorite: boolean;
+  }>;
+}
+
+export interface ABTestResult {
+  id: number;
+  generation_id: number;
+  variant_a: string;
+  variant_b: string;
+  winner?: string;
+  winner_reason?: string;
+  created_at: string;
+  decided_at?: string;
+}
+
+export interface ABTestStats {
+  total_tests: number;
+  decided_tests: number;
+  variant_a_wins: number;
+  variant_b_wins: number;
+  undecided_tests: number;
+  avg_decision_time_hours?: number;
+}
+
+// ============ Analytics API ============
+
+export async function analyzeReadability(text: string): Promise<ReadabilityMetrics> {
+  const response = await fetch(`${API_BASE}/analytics/readability`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (!response.ok) throw new Error('Failed to analyze readability');
+  return response.json();
+}
+
+export async function analyzeSentiment(text: string): Promise<SentimentAnalysis> {
+  const response = await fetch(`${API_BASE}/analytics/sentiment`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (!response.ok) throw new Error('Failed to analyze sentiment');
+  return response.json();
+}
+
+export async function analyzeSEO(
+  text: string,
+  targetKeywords?: string[],
+  contentType?: string
+): Promise<SEOAnalysis> {
+  const response = await fetch(`${API_BASE}/analytics/seo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      target_keywords: targetKeywords,
+      content_type: contentType || 'blog',
+    }),
+  });
+  if (!response.ok) throw new Error('Failed to analyze SEO');
+  return response.json();
+}
+
+export async function predictEngagement(
+  text: string,
+  contentType?: string,
+  platform?: string
+): Promise<EngagementPrediction> {
+  const response = await fetch(`${API_BASE}/analytics/engagement`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      content_type: contentType || 'social',
+      platform,
+    }),
+  });
+  if (!response.ok) throw new Error('Failed to predict engagement');
+  return response.json();
+}
+
+export async function getFullAnalysis(
+  text: string,
+  targetKeywords?: string[],
+  contentType?: string,
+  platform?: string
+): Promise<FullAnalysis> {
+  const response = await fetch(`${API_BASE}/analytics/full`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      target_keywords: targetKeywords,
+      content_type: contentType || 'blog',
+      platform,
+    }),
+  });
+  if (!response.ok) throw new Error('Failed to get full analysis');
+  return response.json();
+}
+
+export async function getUsageAnalytics(): Promise<UsageAnalytics> {
+  const response = await fetch(`${API_BASE}/analytics/usage`);
+  if (!response.ok) throw new Error('Failed to get usage analytics');
+  return response.json();
+}
+
+export async function createABTest(
+  generationId: number,
+  variantA: string,
+  variantB: string
+): Promise<ABTestResult> {
+  const response = await fetch(`${API_BASE}/analytics/ab-tests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      generation_id: generationId,
+      variant_a: variantA,
+      variant_b: variantB,
+    }),
+  });
+  if (!response.ok) throw new Error('Failed to create A/B test');
+  return response.json();
+}
+
+export async function getABTests(decidedOnly = false): Promise<ABTestResult[]> {
+  const params = new URLSearchParams();
+  if (decidedOnly) params.append('decided_only', 'true');
+  const response = await fetch(`${API_BASE}/analytics/ab-tests?${params}`);
+  if (!response.ok) throw new Error('Failed to get A/B tests');
+  return response.json();
+}
+
+export async function recordABTestWinner(
+  testId: number,
+  winner: 'A' | 'B',
+  reason?: string
+): Promise<ABTestResult> {
+  const response = await fetch(`${API_BASE}/analytics/ab-tests/${testId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ winner, winner_reason: reason }),
+  });
+  if (!response.ok) throw new Error('Failed to record A/B test winner');
+  return response.json();
+}
+
+export async function getABTestStats(): Promise<ABTestStats> {
+  const response = await fetch(`${API_BASE}/analytics/ab-tests/stats`);
+  if (!response.ok) throw new Error('Failed to get A/B test stats');
+  return response.json();
+}

@@ -6,6 +6,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { CompetitorAnalysis } from '../components/CompetitorAnalysis';
 import { ProjectManager } from '../components/ProjectManager';
 import { TagManager } from '../components/TagManager';
+import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
 import { GenerationHistory } from '../api/client';
 
 export function Home() {
@@ -13,6 +14,7 @@ export function Home() {
   const [competitorAnalysisOpen, setCompetitorAnalysisOpen] = useState(false);
   const [projectManagerOpen, setProjectManagerOpen] = useState(false);
   const [tagManagerOpen, setTagManagerOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
 
   const handleGenerated = () => {
     setRefreshTrigger((prev) => prev + 1);
@@ -62,6 +64,15 @@ export function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Analyze
+              </button>
+              <button
+                onClick={() => setAnalyticsOpen(true)}
+                className="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Analytics
               </button>
               <Link
                 to="/content"
@@ -119,6 +130,12 @@ export function Home() {
         isOpen={tagManagerOpen}
         onClose={() => setTagManagerOpen(false)}
         onTagsChange={() => setRefreshTrigger((prev) => prev + 1)}
+      />
+
+      {/* Analytics Dashboard Modal */}
+      <AnalyticsDashboard
+        isOpen={analyticsOpen}
+        onClose={() => setAnalyticsOpen(false)}
       />
     </div>
   );
