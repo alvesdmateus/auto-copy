@@ -1,10 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   countText,
   exportAsMarkdown,
   exportAsHtml,
   PLATFORM_LIMITS,
   RefineAction,
+  StyleViolation,
+  checkStyle,
 } from '../api/client';
 
 interface OutputDisplayProps {
@@ -13,6 +15,7 @@ interface OutputDisplayProps {
   selectedPlatform?: string;
   onRefine?: (action: RefineAction) => void;
   isRefining?: boolean;
+  brandId?: number | null;
 }
 
 const REFINE_ACTIONS: { action: RefineAction; label: string; icon: string }[] = [
@@ -30,11 +33,40 @@ export function OutputDisplay({
   selectedPlatform,
   onRefine,
   isRefining,
+  brandId,
 }: OutputDisplayProps) {
   const [copied, setCopied] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [styleViolations, setStyleViolations] = useState<StyleViolation[]>([]);
+  const [styleScore, setStyleScore] = useState<number | null>(null);
+  const [showViolations, setShowViolations] = useState(true);
 
   const { chars, words } = useMemo(() => countText(output), [output]);
+
+  // Check style when output changes and a brand is selected
+  useEffect(() => {
+    const checkStyleViolations = async () => {
+      if (!output || !brandId || isLoading) {
+        setStyleViolations([]);
+        setStyleScore(null);
+        return;
+      }
+
+      try {
+        const result = await checkStyle(output, brandId);
+        setStyleViolations(result.violations);
+        setStyleScore(result.score);
+      } catch (err) {
+        console.error('Failed to check style:', err);
+        setStyleViolations([]);
+        setStyleScore(null);
+      }
+    };
+
+    // Debounce the style check
+    const timeoutId = setTimeout(checkStyleViolations, 500);
+    return () => clearTimeout(timeoutId);
+  }, [output, brandId, isLoading]);
 
   const platformLimit = selectedPlatform
     ? PLATFORM_LIMITS[selectedPlatform.toLowerCase()]
@@ -195,11 +227,73 @@ export function OutputDisplay({
                 </span>
               )}
             </span>
+            {styleScore !== null && (
+              <span
+                className={`font-medium ${
+                  styleScore >= 80
+                    ? 'text-green-600 dark:text-green-400'
+                    : styleScore >= 50
+                    ? 'text-yellow-600 dark:text-yellow-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`}
+              >
+                Style: {styleScore}%
+              </span>
+            )}
           </div>
           {isOverLimit && (
             <span className="text-red-500 text-xs">
               {chars - platformLimit!.chars} over limit
             </span>
+          )}
+        </div>
+      )}
+
+      {/* Style Violations */}
+      {styleViolations.length > 0 && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                Style Guide Warnings ({styleViolations.length})
+              </span>
+            </div>
+            <button
+              onClick={() => setShowViolations(!showViolations)}
+              className="text-xs text-yellow-600 dark:text-yellow-400 hover:underline"
+            >
+              {showViolations ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {showViolations && (
+            <ul className="space-y-1">
+              {styleViolations.map((violation, index) => (
+                <li key={index} className="text-sm text-yellow-700 dark:text-yellow-300 flex items-start gap-2">
+                  <span className="mt-0.5">
+                    {violation.severity === 'error' ? (
+                      <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </span>
+                  <div>
+                    <span>{violation.message}</span>
+                    {violation.suggestion && (
+                      <span className="block text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
+                        Suggestion: {violation.suggestion}
+                      </span>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       )}

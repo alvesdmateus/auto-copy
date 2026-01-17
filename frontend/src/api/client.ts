@@ -1,12 +1,52 @@
 const API_BASE = '/api';
 
+export interface TemplateVariable {
+  name: string;
+  label: string;
+  placeholder: string;
+  required: boolean;
+  type: 'text' | 'textarea' | 'select';
+  options?: string[];
+}
+
+export interface WizardStep {
+  title: string;
+  description?: string;
+  variables: string[]; // List of variable names to show in this step
+}
+
+export type TemplateCategory = 'social' | 'email' | 'ads' | 'ecommerce' | 'seo' | 'general';
+
 export interface Template {
   id: number;
   name: string;
   platform: string;
+  category: string;
+  description: string | null;
   prompt_template: string;
+  variables: TemplateVariable[] | null;
+  wizard_steps: WizardStep[] | null;
+  example_output: string | null;
   is_custom: boolean;
+  is_ab_template: boolean;
   created_at: string;
+}
+
+export interface CommunityTemplate {
+  name: string;
+  platform: string;
+  category: string;
+  description: string;
+  prompt_template: string;
+  variables?: TemplateVariable[];
+  wizard_steps?: WizardStep[];
+  example_output?: string;
+  is_ab_template?: boolean;
+}
+
+export interface CategoryOption {
+  value: string;
+  label: string;
 }
 
 export interface GenerationHistory {
@@ -23,10 +63,22 @@ export interface GenerateRequest {
   prompt: string;
   template_id?: number | null;
   tone?: string | null;
+  variables?: Record<string, string>;
+  brand_id?: number | null;
+  persona_id?: number | null;
 }
 
 export interface VariationsRequest extends GenerateRequest {
   count?: number;
+}
+
+export interface ABTestRequest {
+  prompt: string;
+  template_id?: number | null;
+  tone?: string | null;
+  variables?: Record<string, string>;
+  brand_id?: number | null;
+  persona_id?: number | null;
 }
 
 export type RefineAction = 'improve' | 'shorten' | 'lengthen' | 'punchier' | 'formal' | 'casual';
@@ -36,6 +88,118 @@ export interface RefineRequest {
   action: RefineAction;
   template_id?: number | null;
   tone?: string | null;
+  brand_id?: number | null;
+}
+
+// ============ Brand Types ============
+
+export interface Brand {
+  id: number;
+  name: string;
+  description: string | null;
+  tone: string | null;
+  voice_attributes: string[] | null;
+  keywords: string[] | null;
+  avoid_words: string[] | null;
+  voice_examples: string[] | null;
+  style_rules: string[] | null;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface BrandCreate {
+  name: string;
+  description?: string;
+  tone?: string;
+  voice_attributes?: string[];
+  keywords?: string[];
+  avoid_words?: string[];
+  voice_examples?: string[];
+  style_rules?: string[];
+  is_default?: boolean;
+}
+
+export interface CustomTone {
+  id: number;
+  name: string;
+  description: string | null;
+  formality: number;
+  energy: number;
+  humor: number;
+  prompt_prefix: string | null;
+  style_instructions: string | null;
+  created_at: string;
+}
+
+export interface CustomToneCreate {
+  name: string;
+  description?: string;
+  formality?: number;
+  energy?: number;
+  humor?: number;
+  prompt_prefix?: string;
+  style_instructions?: string;
+}
+
+export interface Persona {
+  id: number;
+  name: string;
+  description: string | null;
+  age_range: string | null;
+  gender: string | null;
+  location: string | null;
+  occupation: string | null;
+  income_level: string | null;
+  interests: string[] | null;
+  values: string[] | null;
+  pain_points: string[] | null;
+  goals: string[] | null;
+  buying_motivations: string[] | null;
+  objections: string[] | null;
+  preferred_channels: string[] | null;
+  communication_style: string | null;
+  language_level: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface PersonaCreate {
+  name: string;
+  description?: string;
+  age_range?: string;
+  gender?: string;
+  location?: string;
+  occupation?: string;
+  income_level?: string;
+  interests?: string[];
+  values?: string[];
+  pain_points?: string[];
+  goals?: string[];
+  buying_motivations?: string[];
+  objections?: string[];
+  preferred_channels?: string[];
+  communication_style?: string;
+  language_level?: string;
+}
+
+export interface StyleViolation {
+  type: string;
+  message: string;
+  severity: string;
+  suggestion: string | null;
+}
+
+export interface StyleCheckResponse {
+  text: string;
+  is_compliant: boolean;
+  violations: StyleViolation[];
+  score: number;
+}
+
+export interface AllTones {
+  presets: { id: null; name: string; description: string; is_preset: true }[];
+  custom: { id: number; name: string; description: string | null; is_preset: false; formality: number; energy: number; humor: number }[];
 }
 
 export interface StreamChunk {
@@ -47,6 +211,10 @@ export interface StreamChunk {
   variation_start?: number;
   variation_done?: number;
   count?: number;
+  // A/B test specific
+  version?: string;
+  version_start?: string;
+  version_done?: string;
 }
 
 // Platform character limits
@@ -86,16 +254,51 @@ async function* streamResponse(
   }
 }
 
-export async function fetchTemplates(): Promise<Template[]> {
-  const response = await fetch(`${API_BASE}/templates`);
+export async function fetchTemplates(params?: {
+  category?: string;
+  platform?: string;
+  custom_only?: boolean;
+}): Promise<Template[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.category) searchParams.set('category', params.category);
+  if (params?.platform) searchParams.set('platform', params.platform);
+  if (params?.custom_only) searchParams.set('custom_only', 'true');
+
+  const url = `${API_BASE}/templates${searchParams.toString() ? '?' + searchParams : ''}`;
+  const response = await fetch(url);
   if (!response.ok) throw new Error('Failed to fetch templates');
+  return response.json();
+}
+
+export async function fetchCategories(): Promise<CategoryOption[]> {
+  const response = await fetch(`${API_BASE}/templates/categories`);
+  if (!response.ok) throw new Error('Failed to fetch categories');
+  return response.json();
+}
+
+export async function fetchCommunityTemplates(): Promise<CommunityTemplate[]> {
+  const response = await fetch(`${API_BASE}/templates/community`);
+  if (!response.ok) throw new Error('Failed to fetch community templates');
+  return response.json();
+}
+
+export async function importCommunityTemplate(templateName: string): Promise<Template> {
+  const response = await fetch(`${API_BASE}/templates/import-community/${encodeURIComponent(templateName)}`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to import community template');
   return response.json();
 }
 
 export async function createTemplate(template: {
   name: string;
   platform: string;
+  category?: string;
+  description?: string;
   prompt_template: string;
+  variables?: TemplateVariable[];
+  example_output?: string;
+  is_ab_template?: boolean;
 }): Promise<Template> {
   const response = await fetch(`${API_BASE}/templates`, {
     method: 'POST',
@@ -103,6 +306,54 @@ export async function createTemplate(template: {
     body: JSON.stringify(template),
   });
   if (!response.ok) throw new Error('Failed to create template');
+  return response.json();
+}
+
+export async function updateTemplate(
+  id: number,
+  template: Partial<{
+    name: string;
+    platform: string;
+    category: string;
+    description: string;
+    prompt_template: string;
+    variables: TemplateVariable[];
+    example_output: string;
+    is_ab_template: boolean;
+  }>
+): Promise<Template> {
+  const response = await fetch(`${API_BASE}/templates/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(template),
+  });
+  if (!response.ok) throw new Error('Failed to update template');
+  return response.json();
+}
+
+export interface TemplateExport {
+  templates: CommunityTemplate[];
+  exported_at: string;
+  version: string;
+}
+
+export async function exportTemplates(templateIds?: number[]): Promise<TemplateExport> {
+  const response = await fetch(`${API_BASE}/templates/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(templateIds || null),
+  });
+  if (!response.ok) throw new Error('Failed to export templates');
+  return response.json();
+}
+
+export async function importTemplates(templates: CommunityTemplate[]): Promise<Template[]> {
+  const response = await fetch(`${API_BASE}/templates/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ templates }),
+  });
+  if (!response.ok) throw new Error('Failed to import templates');
   return response.json();
 }
 
@@ -156,6 +407,22 @@ export async function* refineCopyStream(
 
   if (!response.ok) {
     throw new Error('Failed to refine copy');
+  }
+
+  yield* streamResponse(response);
+}
+
+export async function* generateABTestStream(
+  request: ABTestRequest
+): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/generate/ab-test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to generate A/B test');
   }
 
   yield* streamResponse(response);
@@ -224,4 +491,466 @@ export function exportAsHtml(text: string, title?: string): string {
   ${titleHtml}<p>${escaped}</p>
 </body>
 </html>`;
+}
+
+// ============ Brand API ============
+
+export async function fetchBrands(): Promise<Brand[]> {
+  const response = await fetch(`${API_BASE}/brand/brands`);
+  if (!response.ok) throw new Error('Failed to fetch brands');
+  return response.json();
+}
+
+export async function fetchBrand(id: number): Promise<Brand> {
+  const response = await fetch(`${API_BASE}/brand/brands/${id}`);
+  if (!response.ok) throw new Error('Failed to fetch brand');
+  return response.json();
+}
+
+export async function createBrand(brand: BrandCreate): Promise<Brand> {
+  const response = await fetch(`${API_BASE}/brand/brands`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(brand),
+  });
+  if (!response.ok) throw new Error('Failed to create brand');
+  return response.json();
+}
+
+export async function updateBrand(id: number, brand: Partial<BrandCreate>): Promise<Brand> {
+  const response = await fetch(`${API_BASE}/brand/brands/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(brand),
+  });
+  if (!response.ok) throw new Error('Failed to update brand');
+  return response.json();
+}
+
+export async function deleteBrand(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/brand/brands/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete brand');
+}
+
+export async function setDefaultBrand(id: number): Promise<Brand> {
+  const response = await fetch(`${API_BASE}/brand/brands/${id}/set-default`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to set default brand');
+  return response.json();
+}
+
+// ============ Custom Tone API ============
+
+export async function fetchAllTones(): Promise<AllTones> {
+  const response = await fetch(`${API_BASE}/brand/tones/all`);
+  if (!response.ok) throw new Error('Failed to fetch tones');
+  return response.json();
+}
+
+export async function fetchCustomTones(): Promise<CustomTone[]> {
+  const response = await fetch(`${API_BASE}/brand/tones`);
+  if (!response.ok) throw new Error('Failed to fetch custom tones');
+  return response.json();
+}
+
+export async function createCustomTone(tone: CustomToneCreate): Promise<CustomTone> {
+  const response = await fetch(`${API_BASE}/brand/tones`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(tone),
+  });
+  if (!response.ok) throw new Error('Failed to create custom tone');
+  return response.json();
+}
+
+export async function updateCustomTone(id: number, tone: Partial<CustomToneCreate>): Promise<CustomTone> {
+  const response = await fetch(`${API_BASE}/brand/tones/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(tone),
+  });
+  if (!response.ok) throw new Error('Failed to update custom tone');
+  return response.json();
+}
+
+export async function deleteCustomTone(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/brand/tones/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete custom tone');
+}
+
+// ============ Persona API ============
+
+export async function fetchPersonas(): Promise<Persona[]> {
+  const response = await fetch(`${API_BASE}/brand/personas`);
+  if (!response.ok) throw new Error('Failed to fetch personas');
+  return response.json();
+}
+
+export async function fetchPersona(id: number): Promise<Persona> {
+  const response = await fetch(`${API_BASE}/brand/personas/${id}`);
+  if (!response.ok) throw new Error('Failed to fetch persona');
+  return response.json();
+}
+
+export async function createPersona(persona: PersonaCreate): Promise<Persona> {
+  const response = await fetch(`${API_BASE}/brand/personas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(persona),
+  });
+  if (!response.ok) throw new Error('Failed to create persona');
+  return response.json();
+}
+
+export async function updatePersona(id: number, persona: Partial<PersonaCreate>): Promise<Persona> {
+  const response = await fetch(`${API_BASE}/brand/personas/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(persona),
+  });
+  if (!response.ok) throw new Error('Failed to update persona');
+  return response.json();
+}
+
+export async function deletePersona(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/brand/personas/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete persona');
+}
+
+// ============ Style Check API ============
+
+export async function checkStyle(text: string, brandId: number): Promise<StyleCheckResponse> {
+  const response = await fetch(`${API_BASE}/brand/style-check`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, brand_id: brandId }),
+  });
+  if (!response.ok) throw new Error('Failed to check style');
+  return response.json();
+}
+
+// ============ Competitor Analysis API ============
+
+export async function* analyzeCompetitorStream(request: {
+  competitor_copy: string;
+  product_description?: string;
+  brand_id?: number;
+  persona_id?: number;
+  differentiation_focus?: string;
+}): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/brand/competitor-analysis`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to analyze competitor');
+  }
+
+  yield* streamResponse(response);
+}
+
+// ============ Workspace Types ============
+
+export interface Project {
+  id: number;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  is_archived: boolean;
+  created_at: string;
+  updated_at?: string;
+  generation_count?: number;
+}
+
+export interface ProjectCreate {
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+}
+
+export interface Tag {
+  id: number;
+  name: string;
+  color?: string;
+  created_at: string;
+  usage_count?: number;
+}
+
+export interface TagCreate {
+  name: string;
+  color?: string;
+}
+
+export interface Comment {
+  id: number;
+  generation_id: number;
+  content: string;
+  author_name?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface CommentCreate {
+  content: string;
+  author_name?: string;
+}
+
+export interface GenerationVersion {
+  id: number;
+  generation_id: number;
+  version_number: number;
+  content: string;
+  change_description?: string;
+  created_at: string;
+}
+
+export interface ShareLink {
+  id: number;
+  generation_id: number;
+  token: string;
+  title?: string;
+  is_active: boolean;
+  allow_comments: boolean;
+  expires_at?: string;
+  view_count: number;
+  created_at: string;
+  share_url?: string;
+}
+
+export interface ShareLinkCreate {
+  title?: string;
+  allow_comments?: boolean;
+  expires_in_days?: number;
+}
+
+export interface SharedContent {
+  title?: string;
+  output: string;
+  prompt?: string;
+  tone?: string;
+  created_at: string;
+  allow_comments: boolean;
+  comments?: Comment[];
+}
+
+export interface GenerationWithWorkspace extends GenerationHistory {
+  project_id?: number;
+  updated_at?: string;
+  project?: Project;
+  tags: Tag[];
+  comment_count: number;
+  version_count: number;
+  has_share_link: boolean;
+}
+
+// ============ Project API ============
+
+export async function fetchProjects(includeArchived = false): Promise<Project[]> {
+  const params = new URLSearchParams();
+  if (includeArchived) params.append('include_archived', 'true');
+
+  const response = await fetch(`${API_BASE}/workspace/projects?${params}`);
+  if (!response.ok) throw new Error('Failed to fetch projects');
+  return response.json();
+}
+
+export async function fetchProject(id: number): Promise<Project> {
+  const response = await fetch(`${API_BASE}/workspace/projects/${id}`);
+  if (!response.ok) throw new Error('Failed to fetch project');
+  return response.json();
+}
+
+export async function createProject(project: ProjectCreate): Promise<Project> {
+  const response = await fetch(`${API_BASE}/workspace/projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(project),
+  });
+  if (!response.ok) throw new Error('Failed to create project');
+  return response.json();
+}
+
+export async function updateProject(id: number, project: Partial<ProjectCreate & { is_archived?: boolean }>): Promise<Project> {
+  const response = await fetch(`${API_BASE}/workspace/projects/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(project),
+  });
+  if (!response.ok) throw new Error('Failed to update project');
+  return response.json();
+}
+
+export async function deleteProject(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/workspace/projects/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete project');
+}
+
+// ============ Tag API ============
+
+export async function fetchTags(): Promise<Tag[]> {
+  const response = await fetch(`${API_BASE}/workspace/tags`);
+  if (!response.ok) throw new Error('Failed to fetch tags');
+  return response.json();
+}
+
+export async function createTag(tag: TagCreate): Promise<Tag> {
+  const response = await fetch(`${API_BASE}/workspace/tags`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(tag),
+  });
+  if (!response.ok) throw new Error('Failed to create tag');
+  return response.json();
+}
+
+export async function updateTag(id: number, tag: Partial<TagCreate>): Promise<Tag> {
+  const response = await fetch(`${API_BASE}/workspace/tags/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(tag),
+  });
+  if (!response.ok) throw new Error('Failed to update tag');
+  return response.json();
+}
+
+export async function deleteTag(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/workspace/tags/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete tag');
+}
+
+// ============ Comment API ============
+
+export async function fetchComments(generationId: number): Promise<Comment[]> {
+  const response = await fetch(`${API_BASE}/workspace/generations/${generationId}/comments`);
+  if (!response.ok) throw new Error('Failed to fetch comments');
+  return response.json();
+}
+
+export async function createComment(generationId: number, comment: CommentCreate): Promise<Comment> {
+  const response = await fetch(`${API_BASE}/workspace/generations/${generationId}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(comment),
+  });
+  if (!response.ok) throw new Error('Failed to create comment');
+  return response.json();
+}
+
+export async function updateComment(commentId: number, content: string): Promise<Comment> {
+  const response = await fetch(`${API_BASE}/workspace/comments/${commentId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  if (!response.ok) throw new Error('Failed to update comment');
+  return response.json();
+}
+
+export async function deleteComment(commentId: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/workspace/comments/${commentId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete comment');
+}
+
+// ============ Version History API ============
+
+export async function fetchVersions(generationId: number): Promise<GenerationVersion[]> {
+  const response = await fetch(`${API_BASE}/workspace/generations/${generationId}/versions`);
+  if (!response.ok) throw new Error('Failed to fetch versions');
+  return response.json();
+}
+
+export async function createVersion(generationId: number, content: string, changeDescription?: string): Promise<GenerationVersion> {
+  const response = await fetch(`${API_BASE}/workspace/generations/${generationId}/versions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content, change_description: changeDescription }),
+  });
+  if (!response.ok) throw new Error('Failed to create version');
+  return response.json();
+}
+
+export async function restoreVersion(generationId: number, versionId: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/workspace/generations/${generationId}/versions/${versionId}/restore`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to restore version');
+}
+
+// ============ Share Link API ============
+
+export async function fetchShareLinks(generationId: number): Promise<ShareLink[]> {
+  const response = await fetch(`${API_BASE}/workspace/generations/${generationId}/shares`);
+  if (!response.ok) throw new Error('Failed to fetch share links');
+  return response.json();
+}
+
+export async function createShareLink(generationId: number, options: ShareLinkCreate = {}): Promise<ShareLink> {
+  const response = await fetch(`${API_BASE}/workspace/generations/${generationId}/shares`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(options),
+  });
+  if (!response.ok) throw new Error('Failed to create share link');
+  return response.json();
+}
+
+export async function updateShareLink(shareId: number, options: Partial<ShareLinkCreate & { is_active?: boolean }>): Promise<ShareLink> {
+  const response = await fetch(`${API_BASE}/workspace/shares/${shareId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(options),
+  });
+  if (!response.ok) throw new Error('Failed to update share link');
+  return response.json();
+}
+
+export async function deleteShareLink(shareId: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/workspace/shares/${shareId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete share link');
+}
+
+export async function fetchSharedContent(token: string): Promise<SharedContent> {
+  const response = await fetch(`${API_BASE}/workspace/share/${token}`);
+  if (!response.ok) {
+    if (response.status === 410) throw new Error('Share link has expired or is inactive');
+    throw new Error('Failed to fetch shared content');
+  }
+  return response.json();
+}
+
+// ============ Generation Organization API ============
+
+export async function organizeGeneration(
+  generationId: number,
+  options: { project_id?: number | null; tag_ids?: number[] }
+): Promise<GenerationWithWorkspace> {
+  const response = await fetch(`${API_BASE}/workspace/generations/${generationId}/organize`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      project_id: options.project_id === null ? 0 : options.project_id,
+      tag_ids: options.tag_ids,
+    }),
+  });
+  if (!response.ok) throw new Error('Failed to organize generation');
+  return response.json();
 }

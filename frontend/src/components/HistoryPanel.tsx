@@ -5,6 +5,8 @@ import {
   toggleFavorite,
   deleteHistoryItem,
 } from '../api/client';
+import { CommentsPanel } from './CommentsPanel';
+import { ShareModal } from './ShareModal';
 
 interface HistoryPanelProps {
   onSelectHistory?: (item: GenerationHistory) => void;
@@ -16,6 +18,8 @@ export function HistoryPanel({ onSelectHistory, refreshTrigger }: HistoryPanelPr
   const [loading, setLoading] = useState(true);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedForComments, setSelectedForComments] = useState<number | null>(null);
+  const [selectedForShare, setSelectedForShare] = useState<number | null>(null);
 
   const loadHistory = async () => {
     setLoading(true);
@@ -116,20 +120,42 @@ export function HistoryPanel({ onSelectHistory, refreshTrigger }: HistoryPanelPr
                   </button>
                   <div className="flex items-center gap-1">
                     <button
+                      onClick={() => setSelectedForComments(item.id)}
+                      className="p-1 text-gray-400 hover:text-blue-500 rounded"
+                      title="Comments"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setSelectedForShare(item.id)}
+                      className="p-1 text-gray-400 hover:text-green-500 rounded"
+                      title="Share"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    </button>
+                    <button
                       onClick={() => handleToggleFavorite(item.id)}
                       className={`p-1 rounded ${
                         item.is_favorite
                           ? 'text-yellow-500'
                           : 'text-gray-400 hover:text-yellow-500'
                       }`}
+                      title="Favorite"
                     >
                       {item.is_favorite ? '\u2605' : '\u2606'}
                     </button>
                     <button
                       onClick={() => handleDelete(item.id)}
                       className="p-1 text-gray-400 hover:text-red-500 rounded"
+                      title="Delete"
                     >
-                      x
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -138,6 +164,24 @@ export function HistoryPanel({ onSelectHistory, refreshTrigger }: HistoryPanelPr
           </ul>
         )}
       </div>
+
+      {/* Comments Panel */}
+      {selectedForComments && (
+        <CommentsPanel
+          generationId={selectedForComments}
+          isOpen={true}
+          onClose={() => setSelectedForComments(null)}
+        />
+      )}
+
+      {/* Share Modal */}
+      {selectedForShare && (
+        <ShareModal
+          generationId={selectedForShare}
+          isOpen={true}
+          onClose={() => setSelectedForShare(null)}
+        />
+      )}
     </div>
   );
 }
