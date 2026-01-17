@@ -53,6 +53,23 @@ from app.schemas.workspace import (
     GenerationWithWorkspace,
 )
 
+from app.schemas.integrations import (
+    WebhookEvent,
+    WebhookCreate,
+    WebhookUpdate,
+    WebhookResponse,
+    WebhookDelivery,
+    WebhookTestResponse,
+    APIKeyCreate,
+    APIKeyUpdate,
+    APIKeyResponse,
+    APIKeyCreated,
+    ExportFormat,
+    ExportRequest,
+    ExportResponse,
+    IntegrationSettings,
+)
+
 __all__ = [
     # Generation
     "GenerateRequest",
@@ -103,4 +120,19 @@ __all__ = [
     "SharedContentResponse",
     "GenerationWorkspaceUpdate",
     "GenerationWithWorkspace",
+    # Integrations
+    "WebhookEvent",
+    "WebhookCreate",
+    "WebhookUpdate",
+    "WebhookResponse",
+    "WebhookDelivery",
+    "WebhookTestResponse",
+    "APIKeyCreate",
+    "APIKeyUpdate",
+    "APIKeyResponse",
+    "APIKeyCreated",
+    "ExportFormat",
+    "ExportRequest",
+    "ExportResponse",
+    "IntegrationSettings",
 ]

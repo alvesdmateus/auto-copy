@@ -1399,3 +1399,272 @@ export async function getABTestStats(): Promise<ABTestStats> {
   if (!response.ok) throw new Error('Failed to get A/B test stats');
   return response.json();
 }
+
+// ============ Integration Types ============
+
+export type WebhookEvent =
+  | 'generation.created'
+  | 'generation.favorited'
+  | 'generation.deleted'
+  | 'template.created'
+  | 'template.updated'
+  | 'brand.created'
+  | 'brand.updated'
+  | 'abtest.decided';
+
+export interface Webhook {
+  id: number;
+  name: string;
+  url: string;
+  events: WebhookEvent[];
+  is_active: boolean;
+  headers?: Record<string, string>;
+  last_triggered?: string;
+  last_status?: number;
+  failure_count: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface WebhookCreate {
+  name: string;
+  url: string;
+  events: WebhookEvent[];
+  secret?: string;
+  is_active?: boolean;
+  headers?: Record<string, string>;
+}
+
+export interface WebhookUpdate {
+  name?: string;
+  url?: string;
+  events?: WebhookEvent[];
+  secret?: string;
+  is_active?: boolean;
+  headers?: Record<string, string>;
+}
+
+export interface WebhookDeliveryLog {
+  id: number;
+  webhook_id: number;
+  event: WebhookEvent;
+  payload: Record<string, unknown>;
+  status_code?: number;
+  response_body?: string;
+  success: boolean;
+  delivered_at: string;
+}
+
+export interface WebhookTestResponse {
+  success: boolean;
+  status_code?: number;
+  response_time_ms: number;
+  error?: string;
+}
+
+export interface APIKey {
+  id: number;
+  name: string;
+  description?: string;
+  key_prefix: string;
+  scopes: string[];
+  is_active: boolean;
+  last_used?: string;
+  usage_count: number;
+  expires_at?: string;
+  created_at: string;
+}
+
+export interface APIKeyCreated extends APIKey {
+  key: string; // Full key only shown once
+}
+
+export interface APIKeyCreate {
+  name: string;
+  description?: string;
+  scopes?: string[];
+  expires_in_days?: number;
+}
+
+export interface APIKeyUpdate {
+  name?: string;
+  description?: string;
+  scopes?: string[];
+  is_active?: boolean;
+}
+
+export type ExportFormat = 'plain' | 'markdown' | 'html' | 'notion' | 'google_docs' | 'json';
+
+export interface ExportRequest {
+  content: string;
+  format: ExportFormat;
+  title?: string;
+  include_metadata?: boolean;
+}
+
+export interface ExportResponse {
+  format: ExportFormat;
+  content: string;
+  mime_type: string;
+  filename: string;
+}
+
+export interface IntegrationSettings {
+  notion: {
+    access_token?: string;
+    default_database_id?: string;
+    is_connected: boolean;
+  };
+  google: {
+    access_token?: string;
+    refresh_token?: string;
+    default_folder_id?: string;
+    is_connected: boolean;
+  };
+  slack: {
+    bot_token?: string;
+    default_channel?: string;
+    is_connected: boolean;
+  };
+}
+
+// ============ Webhook API ============
+
+export async function fetchWebhooks(): Promise<Webhook[]> {
+  const response = await fetch(`${API_BASE}/integrations/webhooks`);
+  if (!response.ok) throw new Error('Failed to fetch webhooks');
+  return response.json();
+}
+
+export async function createWebhook(webhook: WebhookCreate): Promise<Webhook> {
+  const response = await fetch(`${API_BASE}/integrations/webhooks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(webhook),
+  });
+  if (!response.ok) throw new Error('Failed to create webhook');
+  return response.json();
+}
+
+export async function updateWebhook(id: number, webhook: WebhookUpdate): Promise<Webhook> {
+  const response = await fetch(`${API_BASE}/integrations/webhooks/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(webhook),
+  });
+  if (!response.ok) throw new Error('Failed to update webhook');
+  return response.json();
+}
+
+export async function deleteWebhook(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/integrations/webhooks/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete webhook');
+}
+
+export async function testWebhook(id: number): Promise<WebhookTestResponse> {
+  const response = await fetch(`${API_BASE}/integrations/webhooks/${id}/test`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to test webhook');
+  return response.json();
+}
+
+export async function getWebhookDeliveries(webhookId: number, limit = 50): Promise<WebhookDeliveryLog[]> {
+  const response = await fetch(`${API_BASE}/integrations/webhooks/${webhookId}/deliveries?limit=${limit}`);
+  if (!response.ok) throw new Error('Failed to fetch webhook deliveries');
+  return response.json();
+}
+
+// ============ API Key API ============
+
+export async function fetchAPIKeys(): Promise<APIKey[]> {
+  const response = await fetch(`${API_BASE}/integrations/api-keys`);
+  if (!response.ok) throw new Error('Failed to fetch API keys');
+  return response.json();
+}
+
+export async function createAPIKey(apiKey: APIKeyCreate): Promise<APIKeyCreated> {
+  const response = await fetch(`${API_BASE}/integrations/api-keys`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(apiKey),
+  });
+  if (!response.ok) throw new Error('Failed to create API key');
+  return response.json();
+}
+
+export async function updateAPIKey(id: number, apiKey: APIKeyUpdate): Promise<APIKey> {
+  const response = await fetch(`${API_BASE}/integrations/api-keys/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(apiKey),
+  });
+  if (!response.ok) throw new Error('Failed to update API key');
+  return response.json();
+}
+
+export async function deleteAPIKey(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE}/integrations/api-keys/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) throw new Error('Failed to delete API key');
+}
+
+export async function revokeAPIKey(id: number): Promise<APIKey> {
+  const response = await fetch(`${API_BASE}/integrations/api-keys/${id}/revoke`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to revoke API key');
+  return response.json();
+}
+
+// ============ Export API ============
+
+export async function exportContent(request: ExportRequest): Promise<ExportResponse> {
+  const response = await fetch(`${API_BASE}/integrations/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to export content');
+  return response.json();
+}
+
+export async function getExportFormats(): Promise<Array<{ format: ExportFormat; label: string; description: string }>> {
+  const response = await fetch(`${API_BASE}/integrations/export/formats`);
+  if (!response.ok) throw new Error('Failed to fetch export formats');
+  return response.json();
+}
+
+// ============ Integration Settings API ============
+
+export async function getIntegrationSettings(): Promise<IntegrationSettings> {
+  const response = await fetch(`${API_BASE}/integrations/settings`);
+  if (!response.ok) throw new Error('Failed to fetch integration settings');
+  return response.json();
+}
+
+export async function updateIntegrationSettings(
+  integration: 'notion' | 'google' | 'slack',
+  settings: Record<string, unknown>
+): Promise<{ success: boolean }> {
+  const response = await fetch(`${API_BASE}/integrations/settings/${integration}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  });
+  if (!response.ok) throw new Error('Failed to update integration settings');
+  return response.json();
+}
+
+export async function disconnectIntegration(
+  integration: 'notion' | 'google' | 'slack'
+): Promise<{ success: boolean }> {
+  const response = await fetch(`${API_BASE}/integrations/settings/${integration}/disconnect`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to disconnect integration');
+  return response.json();
+}

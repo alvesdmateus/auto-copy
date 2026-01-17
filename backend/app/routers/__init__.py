@@ -5,5 +5,6 @@ from app.routers.brand import router as brand_router
 from app.routers.workspace import router as workspace_router
 from app.routers.content import router as content_router
 from app.routers.analytics import router as analytics_router
+from app.routers.integrations import router as integrations_router
 
-__all__ = ["generate_router", "templates_router", "history_router", "brand_router", "workspace_router", "content_router", "analytics_router"]
+__all__ = ["generate_router", "templates_router", "history_router", "brand_router", "workspace_router", "content_router", "analytics_router", "integrations_router"]
