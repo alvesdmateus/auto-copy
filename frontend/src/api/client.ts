@@ -1668,3 +1668,380 @@ export async function disconnectIntegration(
   if (!response.ok) throw new Error('Failed to disconnect integration');
   return response.json();
 }
+
+// ============ Advanced AI Types ============
+
+export interface OllamaModel {
+  name: string;
+  model: string;
+  modified_at: string;
+  size: number;
+  digest: string;
+}
+
+export interface ModelListResponse {
+  models: OllamaModel[];
+  current_model: string;
+}
+
+export interface ModelInfo {
+  name: string;
+  modelfile?: string;
+  parameters?: string;
+  template?: string;
+  system?: string;
+  license?: string;
+  capabilities: string[];
+}
+
+export type ContentFormat =
+  | 'blog_post'
+  | 'social_post'
+  | 'email'
+  | 'ad_copy'
+  | 'tweet_thread'
+  | 'linkedin_post'
+  | 'instagram_caption'
+  | 'video_script'
+  | 'press_release'
+  | 'product_description';
+
+export type Language =
+  | 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'nl' | 'ru'
+  | 'zh' | 'ja' | 'ko' | 'ar' | 'hi' | 'tr' | 'pl' | 'sv';
+
+export const LANGUAGE_NAMES: Record<Language, string> = {
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  it: 'Italian',
+  pt: 'Portuguese',
+  nl: 'Dutch',
+  ru: 'Russian',
+  zh: 'Chinese',
+  ja: 'Japanese',
+  ko: 'Korean',
+  ar: 'Arabic',
+  hi: 'Hindi',
+  tr: 'Turkish',
+  pl: 'Polish',
+  sv: 'Swedish',
+};
+
+export interface URLToCopyRequest {
+  url: string;
+  output_type?: 'rewrite' | 'summarize' | 'extract';
+  tone?: string;
+  target_length?: 'short' | 'medium' | 'long';
+  focus?: string;
+  model?: string;
+  brand_id?: number;
+  persona_id?: number;
+}
+
+export interface URLToCopyResponse {
+  original_url: string;
+  extracted_title?: string;
+  extracted_content: string;
+  generated_copy: string;
+  word_count: number;
+}
+
+export interface RepurposeRequest {
+  content: string;
+  source_format: ContentFormat;
+  target_format: ContentFormat;
+  tone?: string;
+  target_platform?: string;
+  max_length?: number;
+  model?: string;
+  brand_id?: number;
+  persona_id?: number;
+}
+
+export interface RepurposeResponse {
+  original_format: ContentFormat;
+  target_format: ContentFormat;
+  original_content: string;
+  repurposed_content: string;
+  word_count: number;
+}
+
+export interface TranslateRequest {
+  content: string;
+  source_language?: Language;
+  target_language: Language;
+  preserve_tone?: boolean;
+  localize?: boolean;
+  model?: string;
+}
+
+export interface TranslateResponse {
+  original_content: string;
+  translated_content: string;
+  source_language: string;
+  target_language: string;
+  detected_language?: string;
+}
+
+export interface MultiTranslateRequest {
+  content: string;
+  target_languages: Language[];
+  preserve_tone?: boolean;
+  model?: string;
+}
+
+export interface MultiTranslateResponse {
+  original_content: string;
+  translations: Record<string, string>;
+}
+
+export interface BulkGenerationItem {
+  prompt: string;
+  template_id?: number;
+  tone?: string;
+  variables?: Record<string, string>;
+}
+
+export interface BulkGenerationRequest {
+  items: BulkGenerationItem[];
+  model?: string;
+  brand_id?: number;
+  persona_id?: number;
+}
+
+export interface BulkGenerationResultItem {
+  index: number;
+  prompt: string;
+  output: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface BulkGenerationResponse {
+  total: number;
+  successful: number;
+  failed: number;
+  results: BulkGenerationResultItem[];
+}
+
+export interface ImageToCopyRequest {
+  image_base64: string;
+  output_type?: 'description' | 'ad_copy' | 'social_post';
+  tone?: string;
+  max_length?: number;
+  model?: string;
+  brand_id?: number;
+  persona_id?: number;
+  additional_context?: string;
+}
+
+export interface ImageToCopyResponse {
+  generated_copy: string;
+  detected_objects?: string[];
+  image_description?: string;
+  word_count: number;
+}
+
+export interface PlagiarismCheckRequest {
+  content: string;
+  check_against?: string[];
+}
+
+export interface SimilarityMatch {
+  matched_text: string;
+  similarity_score: number;
+  source?: string;
+}
+
+export interface PlagiarismCheckResponse {
+  content: string;
+  is_original: boolean;
+  originality_score: number;
+  matches: SimilarityMatch[];
+  word_count: number;
+  unique_phrases_ratio: number;
+}
+
+// ============ Advanced AI API ============
+
+export async function fetchModels(): Promise<ModelListResponse> {
+  const response = await fetch(`${API_BASE}/advanced/models`);
+  if (!response.ok) throw new Error('Failed to fetch models');
+  return response.json();
+}
+
+export async function getModelInfo(modelName: string): Promise<ModelInfo> {
+  const response = await fetch(`${API_BASE}/advanced/models/${encodeURIComponent(modelName)}`);
+  if (!response.ok) throw new Error('Failed to get model info');
+  return response.json();
+}
+
+export async function switchModel(model: string): Promise<{ success: boolean; current_model: string; message: string }> {
+  const response = await fetch(`${API_BASE}/advanced/models/switch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model }),
+  });
+  if (!response.ok) throw new Error('Failed to switch model');
+  return response.json();
+}
+
+export async function resetModel(): Promise<{ success: boolean; current_model: string }> {
+  const response = await fetch(`${API_BASE}/advanced/models/reset`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to reset model');
+  return response.json();
+}
+
+export async function urlToCopy(request: URLToCopyRequest): Promise<URLToCopyResponse> {
+  const response = await fetch(`${API_BASE}/advanced/url-to-copy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to process URL');
+  return response.json();
+}
+
+export async function* urlToCopyStream(request: URLToCopyRequest): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/advanced/url-to-copy/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to process URL');
+  yield* streamResponse(response);
+}
+
+export async function repurposeContent(request: RepurposeRequest): Promise<RepurposeResponse> {
+  const response = await fetch(`${API_BASE}/advanced/repurpose`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to repurpose content');
+  return response.json();
+}
+
+export async function* repurposeContentStream(request: RepurposeRequest): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/advanced/repurpose/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to repurpose content');
+  yield* streamResponse(response);
+}
+
+export async function getRepurposeFormats(): Promise<Array<{ value: ContentFormat; label: string; description: string }>> {
+  const response = await fetch(`${API_BASE}/advanced/repurpose/formats`);
+  if (!response.ok) throw new Error('Failed to get formats');
+  return response.json();
+}
+
+export async function translateContent(request: TranslateRequest): Promise<TranslateResponse> {
+  const response = await fetch(`${API_BASE}/advanced/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to translate content');
+  return response.json();
+}
+
+export async function translateMultiple(request: MultiTranslateRequest): Promise<MultiTranslateResponse> {
+  const response = await fetch(`${API_BASE}/advanced/translate/multi`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to translate content');
+  return response.json();
+}
+
+export async function* translateStream(request: TranslateRequest): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/advanced/translate/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to translate content');
+  yield* streamResponse(response);
+}
+
+export async function getAvailableLanguages(): Promise<Array<{ code: Language; name: string }>> {
+  const response = await fetch(`${API_BASE}/advanced/translate/languages`);
+  if (!response.ok) throw new Error('Failed to get languages');
+  return response.json();
+}
+
+export async function bulkGenerate(request: BulkGenerationRequest): Promise<BulkGenerationResponse> {
+  const response = await fetch(`${API_BASE}/advanced/bulk/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to bulk generate');
+  return response.json();
+}
+
+export async function uploadCSVForBulk(file: File): Promise<{ rows_parsed: number; items: BulkGenerationItem[]; errors: string[] }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await fetch(`${API_BASE}/advanced/bulk/upload-csv`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) throw new Error('Failed to parse CSV');
+  return response.json();
+}
+
+export async function imageToCopy(request: ImageToCopyRequest): Promise<ImageToCopyResponse> {
+  const response = await fetch(`${API_BASE}/advanced/image-to-copy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to process image');
+  return response.json();
+}
+
+export async function* imageToCopyStream(request: ImageToCopyRequest): AsyncGenerator<StreamChunk> {
+  const response = await fetch(`${API_BASE}/advanced/image-to-copy/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to process image');
+  yield* streamResponse(response);
+}
+
+export async function checkPlagiarism(request: PlagiarismCheckRequest): Promise<PlagiarismCheckResponse> {
+  const response = await fetch(`${API_BASE}/advanced/plagiarism-check`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error('Failed to check plagiarism');
+  return response.json();
+}
+
+export async function analyzeContentQuality(content: string, model?: string): Promise<{
+  strengths: string[];
+  weaknesses: string[];
+  tone_detected: string;
+  overall_quality_score: number;
+  suggestions: Array<{ type: string; message: string }>;
+}> {
+  const params = new URLSearchParams();
+  params.append('content', content);
+  if (model) params.append('model', model);
+  const response = await fetch(`${API_BASE}/advanced/analyze-quality?${params}`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to analyze content');
+  return response.json();
+}

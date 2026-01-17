@@ -1,6 +1,6 @@
 import httpx
 import json
-from typing import AsyncGenerator, Optional, Dict, Any
+from typing import AsyncGenerator, Optional, Dict, Any, List
 from app.config import get_settings
 
 
@@ -95,17 +95,41 @@ class OllamaService:
         self.base_url = settings.ollama_base_url
         self.model = settings.ollama_model
 
-    async def generate_stream(self, prompt: str) -> AsyncGenerator[str, None]:
+    async def list_models(self) -> List[Dict[str, Any]]:
+        """List all available Ollama models."""
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(f"{self.base_url}/api/tags")
+            response.raise_for_status()
+            data = response.json()
+            return data.get("models", [])
+
+    async def get_model_info(self, model_name: str) -> Dict[str, Any]:
+        """Get detailed information about a specific model."""
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{self.base_url}/api/show",
+                json={"name": model_name},
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def generate_stream(
+        self, prompt: str, model: Optional[str] = None, images: Optional[List[str]] = None
+    ) -> AsyncGenerator[str, None]:
         """Generate text using Ollama with streaming response."""
+        payload = {
+            "model": model or self.model,
+            "prompt": prompt,
+            "stream": True,
+        }
+        if images:
+            payload["images"] = images
+
         async with httpx.AsyncClient(timeout=120.0) as client:
             async with client.stream(
                 "POST",
                 f"{self.base_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": True,
-                },
+                json=payload,
             ) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
@@ -116,16 +140,22 @@ class OllamaService:
                         if data.get("done", False):
                             break
 
-    async def generate(self, prompt: str) -> str:
+    async def generate(
+        self, prompt: str, model: Optional[str] = None, images: Optional[List[str]] = None
+    ) -> str:
         """Generate text using Ollama (non-streaming)."""
+        payload = {
+            "model": model or self.model,
+            "prompt": prompt,
+            "stream": False,
+        }
+        if images:
+            payload["images"] = images
+
         async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 f"{self.base_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": False,
-                },
+                json=payload,
             )
             response.raise_for_status()
             data = response.json()

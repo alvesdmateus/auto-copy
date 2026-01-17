@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from app.database import init_db, async_session_maker
 from app.models import Template
-from app.routers import generate_router, templates_router, history_router, brand_router, workspace_router, content_router, analytics_router, integrations_router
+from app.routers import generate_router, templates_router, history_router, brand_router, workspace_router, content_router, analytics_router, integrations_router, advanced_router
 
 
 DEFAULT_TEMPLATES = [
@@ -193,6 +193,7 @@ app.include_router(workspace_router)
 app.include_router(content_router)
 app.include_router(analytics_router)
 app.include_router(integrations_router)
+app.include_router(advanced_router)
 
 
 @app.get("/")
