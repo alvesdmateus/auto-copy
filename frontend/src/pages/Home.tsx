@@ -8,8 +8,10 @@ import { ProjectManager } from '../components/ProjectManager';
 import { TagManager } from '../components/TagManager';
 import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
 import { GenerationHistory } from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 
 export function Home() {
+  const { user, isAuthenticated, usage } = useAuth();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [competitorAnalysisOpen, setCompetitorAnalysisOpen] = useState(false);
   const [projectManagerOpen, setProjectManagerOpen] = useState(false);
@@ -108,6 +110,33 @@ export function Home() {
                 History
               </Link>
               <ThemeToggle />
+
+              {/* User Menu */}
+              {isAuthenticated ? (
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                >
+                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                    {user?.username?.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="hidden sm:block">
+                    <div className="text-sm font-medium">{user?.username}</div>
+                    {usage && usage.generation_limit !== -1 && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {usage.generations_remaining}/{usage.generation_limit} left
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              ) : (
+                <Link
+                  to="/auth"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  Sign In
+                </Link>
+              )}
             </div>
           </div>
         </div>

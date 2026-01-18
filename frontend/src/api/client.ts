@@ -2045,3 +2045,377 @@ export async function analyzeContentQuality(content: string, model?: string): Pr
   if (!response.ok) throw new Error('Failed to analyze content');
   return response.json();
 }
+
+// ============ Authentication Types ============
+
+export type UserTier = 'free' | 'pro' | 'enterprise';
+
+export interface User {
+  id: number;
+  email: string;
+  username: string;
+  tier: UserTier;
+  is_active: boolean;
+  is_verified: boolean;
+  is_admin: boolean;
+  generation_limit: number;
+  generations_today: number;
+  api_calls_limit: number;
+  api_calls_today: number;
+  last_generation_reset: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user: User;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  username: string;
+  password: string;
+}
+
+export interface UsageLimits {
+  tier: UserTier;
+  generation_limit: number;
+  generations_used: number;
+  generations_remaining: number;
+  api_calls_limit: number;
+  api_calls_used: number;
+  api_calls_remaining: number;
+  resets_at: string;
+  features: string[];
+  locked_features: string[];
+}
+
+export interface TierInfo {
+  tier: UserTier;
+  name: string;
+  generation_limit: number;
+  api_calls_limit: number;
+  price_monthly: number;
+  price_yearly: number;
+  features: string[];
+  locked_features: string[];
+}
+
+export interface AuditLogEntry {
+  id: number;
+  user_id: number;
+  action: string;
+  resource_type: string | null;
+  resource_id: number | null;
+  details: Record<string, unknown> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
+export interface WhiteLabelConfig {
+  id: number;
+  user_id: number;
+  company_name: string | null;
+  logo_url: string | null;
+  favicon_url: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+  custom_css: string | null;
+  custom_domain: string | null;
+  hide_branding: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface WhiteLabelUpdate {
+  company_name?: string;
+  logo_url?: string;
+  favicon_url?: string;
+  primary_color?: string;
+  secondary_color?: string;
+  custom_css?: string;
+  custom_domain?: string;
+  hide_branding?: boolean;
+}
+
+// ============ Auth Token Management ============
+
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null): void {
+  authToken = token;
+  if (token) {
+    localStorage.setItem('auth_token', token);
+  } else {
+    localStorage.removeItem('auth_token');
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (!authToken) {
+    authToken = localStorage.getItem('auth_token');
+  }
+  return authToken;
+}
+
+export function clearAuthToken(): void {
+  authToken = null;
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('refresh_token');
+}
+
+function getAuthHeaders(): HeadersInit {
+  const token = getAuthToken();
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+// ============ Auth API ============
+
+export async function login(request: LoginRequest): Promise<TokenResponse> {
+  const response = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Login failed');
+  }
+  const data: TokenResponse = await response.json();
+  setAuthToken(data.access_token);
+  localStorage.setItem('refresh_token', data.refresh_token);
+  return data;
+}
+
+export async function register(request: RegisterRequest): Promise<TokenResponse> {
+  const response = await fetch(`${API_BASE}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Registration failed');
+  }
+  const data: TokenResponse = await response.json();
+  setAuthToken(data.access_token);
+  localStorage.setItem('refresh_token', data.refresh_token);
+  return data;
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/auth/logout`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+  } finally {
+    clearAuthToken();
+  }
+}
+
+export async function refreshToken(): Promise<TokenResponse> {
+  const refresh = localStorage.getItem('refresh_token');
+  if (!refresh) {
+    throw new Error('No refresh token');
+  }
+  const response = await fetch(`${API_BASE}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refresh }),
+  });
+  if (!response.ok) {
+    clearAuthToken();
+    throw new Error('Token refresh failed');
+  }
+  const data: TokenResponse = await response.json();
+  setAuthToken(data.access_token);
+  localStorage.setItem('refresh_token', data.refresh_token);
+  return data;
+}
+
+export async function getCurrentUser(): Promise<User> {
+  const response = await fetch(`${API_BASE}/auth/me`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Failed to get current user');
+  return response.json();
+}
+
+export async function updateProfile(data: { username?: string; email?: string }): Promise<User> {
+  const response = await fetch(`${API_BASE}/auth/me`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to update profile');
+  return response.json();
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE}/auth/change-password`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to change password');
+  }
+  return response.json();
+}
+
+export async function requestPasswordReset(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) throw new Error('Failed to request password reset');
+  return response.json();
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, new_password: newPassword }),
+  });
+  if (!response.ok) throw new Error('Password reset failed');
+  return response.json();
+}
+
+// ============ Usage & Tiers API ============
+
+export async function getUsageLimits(): Promise<UsageLimits> {
+  const response = await fetch(`${API_BASE}/auth/usage`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Failed to get usage limits');
+  return response.json();
+}
+
+export async function getTierInfo(): Promise<TierInfo[]> {
+  const response = await fetch(`${API_BASE}/auth/tiers`);
+  if (!response.ok) throw new Error('Failed to get tier info');
+  return response.json();
+}
+
+export async function upgradeTier(tier: UserTier): Promise<{ message: string; user: User }> {
+  const response = await fetch(`${API_BASE}/auth/upgrade`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ tier }),
+  });
+  if (!response.ok) throw new Error('Failed to upgrade tier');
+  return response.json();
+}
+
+// ============ Audit Logs API ============
+
+export async function getAuditLogs(params?: {
+  limit?: number;
+  offset?: number;
+  action?: string;
+  resource_type?: string;
+}): Promise<AuditLogEntry[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.limit) searchParams.set('limit', params.limit.toString());
+  if (params?.offset) searchParams.set('offset', params.offset.toString());
+  if (params?.action) searchParams.set('action', params.action);
+  if (params?.resource_type) searchParams.set('resource_type', params.resource_type);
+
+  const response = await fetch(`${API_BASE}/auth/audit-logs?${searchParams}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Failed to get audit logs');
+  return response.json();
+}
+
+// ============ White-label API ============
+
+export async function getWhiteLabelConfig(): Promise<WhiteLabelConfig | null> {
+  const response = await fetch(`${API_BASE}/auth/whitelabel`, {
+    headers: getAuthHeaders(),
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error('Failed to get white-label config');
+  return response.json();
+}
+
+export async function updateWhiteLabelConfig(config: WhiteLabelUpdate): Promise<WhiteLabelConfig> {
+  const response = await fetch(`${API_BASE}/auth/whitelabel`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(config),
+  });
+  if (!response.ok) throw new Error('Failed to update white-label config');
+  return response.json();
+}
+
+export async function deleteWhiteLabelConfig(): Promise<void> {
+  const response = await fetch(`${API_BASE}/auth/whitelabel`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Failed to delete white-label config');
+}
+
+// ============ Admin API ============
+
+export async function adminListUsers(params?: {
+  limit?: number;
+  offset?: number;
+  tier?: UserTier;
+  is_active?: boolean;
+}): Promise<User[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.limit) searchParams.set('limit', params.limit.toString());
+  if (params?.offset) searchParams.set('offset', params.offset.toString());
+  if (params?.tier) searchParams.set('tier', params.tier);
+  if (params?.is_active !== undefined) searchParams.set('is_active', params.is_active.toString());
+
+  const response = await fetch(`${API_BASE}/auth/admin/users?${searchParams}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Failed to list users');
+  return response.json();
+}
+
+export async function adminUpdateUser(userId: number, data: {
+  tier?: UserTier;
+  is_active?: boolean;
+  is_admin?: boolean;
+  generation_limit?: number;
+  api_calls_limit?: number;
+}): Promise<User> {
+  const response = await fetch(`${API_BASE}/auth/admin/users/${userId}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to update user');
+  return response.json();
+}
+
+export async function adminGetUserAuditLogs(userId: number, limit = 50): Promise<AuditLogEntry[]> {
+  const response = await fetch(`${API_BASE}/auth/admin/users/${userId}/audit-logs?limit=${limit}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Failed to get user audit logs');
+  return response.json();
+}

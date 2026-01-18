@@ -7,5 +7,6 @@ from app.routers.content import router as content_router
 from app.routers.analytics import router as analytics_router
 from app.routers.integrations import router as integrations_router
 from app.routers.advanced import router as advanced_router
+from app.routers.auth import router as auth_router
 
-__all__ = ["generate_router", "templates_router", "history_router", "brand_router", "workspace_router", "content_router", "analytics_router", "integrations_router", "advanced_router"]
+__all__ = ["generate_router", "templates_router", "history_router", "brand_router", "workspace_router", "content_router", "analytics_router", "integrations_router", "advanced_router", "auth_router"]
