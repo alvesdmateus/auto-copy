@@ -66,8 +66,9 @@ async def auth_headers(client):
     # Register user
     register_data = {
         "email": "test@example.com",
+        "username": "testuser",
         "password": "TestPassword123!",
-        "name": "Test User"
+        "full_name": "Test User"
     }
     await client.post("/api/auth/register", json=register_data)
 

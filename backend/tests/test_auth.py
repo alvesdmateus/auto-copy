@@ -9,29 +9,32 @@ class TestAuthRegistration:
         """Test successful user registration."""
         user_data = {
             "email": "newuser@example.com",
+            "username": "newuser",
             "password": "SecurePass123!",
-            "name": "New User"
+            "full_name": "New User"
         }
         response = await client.post("/api/auth/register", json=user_data)
         assert response.status_code == 200
         data = response.json()
-        assert data["email"] == "newuser@example.com"
-        assert data["name"] == "New User"
-        assert "password" not in data
-        assert "hashed_password" not in data
+        # Registration returns tokens, not user data
+        assert "access_token" in data
+        assert "refresh_token" in data
+        assert data["token_type"] == "bearer"
+        assert "expires_in" in data
 
     async def test_register_duplicate_email(self, client):
         """Test registration with existing email fails."""
         user_data = {
             "email": "duplicate@example.com",
+            "username": "duplicate1",
             "password": "SecurePass123!",
-            "name": "First User"
+            "full_name": "First User"
         }
         # Register first user
         await client.post("/api/auth/register", json=user_data)
 
         # Try to register with same email
-        user_data["name"] = "Second User"
+        user_data["username"] = "duplicate2"
         response = await client.post("/api/auth/register", json=user_data)
         assert response.status_code == 400
 
@@ -39,8 +42,9 @@ class TestAuthRegistration:
         """Test registration with weak password fails."""
         user_data = {
             "email": "weakpass@example.com",
+            "username": "weakpass",
             "password": "123",
-            "name": "Weak Pass User"
+            "full_name": "Weak Pass User"
         }
         response = await client.post("/api/auth/register", json=user_data)
         assert response.status_code in [400, 422]
@@ -49,8 +53,9 @@ class TestAuthRegistration:
         """Test registration with invalid email fails."""
         user_data = {
             "email": "not-an-email",
+            "username": "invalidemail",
             "password": "SecurePass123!",
-            "name": "Invalid Email User"
+            "full_name": "Invalid Email User"
         }
         response = await client.post("/api/auth/register", json=user_data)
         assert response.status_code == 422
@@ -64,8 +69,9 @@ class TestAuthLogin:
         # Register user first
         register_data = {
             "email": "login@example.com",
+            "username": "loginuser",
             "password": "SecurePass123!",
-            "name": "Login User"
+            "full_name": "Login User"
         }
         await client.post("/api/auth/register", json=register_data)
 
@@ -85,8 +91,9 @@ class TestAuthLogin:
         # Register user first
         register_data = {
             "email": "wrongpass@example.com",
+            "username": "wrongpass",
             "password": "SecurePass123!",
-            "name": "Wrong Pass User"
+            "full_name": "Wrong Pass User"
         }
         await client.post("/api/auth/register", json=register_data)
 
@@ -117,7 +124,7 @@ class TestAuthProfile:
         assert response.status_code == 200
         data = response.json()
         assert "email" in data
-        assert "name" in data
+        assert "username" in data
 
     async def test_get_profile_unauthenticated(self, client):
         """Test getting profile without auth fails."""
