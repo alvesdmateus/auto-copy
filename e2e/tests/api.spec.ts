@@ -42,15 +42,17 @@ test.describe('API Authentication', () => {
 
   test('can register new user', async ({ request }) => {
     const uniqueEmail = `test-${Date.now()}@example.com`;
+    const uniqueUsername = `testuser${Date.now()}`;
     const response = await request.post('http://localhost:8000/api/auth/register', {
       data: {
         email: uniqueEmail,
+        username: uniqueUsername,
         password: 'TestPassword123!',
-        name: 'Test User',
+        full_name: 'Test User',
       },
     });
 
-    // Should succeed or fail with duplicate email
+    // Should succeed or fail with duplicate email/username
     expect([200, 400]).toContain(response.status());
   });
 
