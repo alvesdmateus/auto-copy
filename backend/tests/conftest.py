@@ -1,11 +1,17 @@
 """Pytest configuration and fixtures for backend tests."""
 import os
+import sys
+import tempfile
 import pytest
+from pathlib import Path
+
+# Set test database in temp directory for cross-platform compatibility
+TEST_DB_PATH = Path(tempfile.gettempdir()) / "test_auto_copy.db"
+os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
+
+# Now import app modules after setting environment
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-
-# Set test database before importing app
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test_auto_copy.db"
 
 from app.main import app
 from app.database import Base, get_db
@@ -13,7 +19,7 @@ from app.database import Base, get_db
 
 # Create test engine and session
 test_engine = create_async_engine(
-    "sqlite+aiosqlite:///./test_auto_copy.db",
+    f"sqlite+aiosqlite:///{TEST_DB_PATH}",
     echo=False,
 )
 test_session_maker = async_sessionmaker(
