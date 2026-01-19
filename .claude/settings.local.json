@@ -9,7 +9,28 @@
       "Bash(git fetch:*)",
       "Bash(npm run build:*)",
       "Bash(python -m py_compile:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run test:run:*)",
+      "Bash(npx vitest run)",
+      "Bash(npx vitest:*)",
+      "Bash(echo:*)",
+      "Bash(npm --version)",
+      "Bash(cmd //c \"npm install\")",
+      "Bash(cmd //c \"npm run test:run\")",
+      "Bash(cmd //c \"npx playwright install chromium\")",
+      "Bash(python -m uvicorn:*)",
+      "Bash(cmd //c \"npm run dev\")",
+      "Bash(curl:*)",
+      "Bash(cmd //c \"npx playwright test --project=chromium\")",
+      "Bash(gh run list:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(cmd //c \"npm run lint\")",
+      "Bash(cmd //c \"npm run lint 2>&1; echo Exit code: $?\")"
     ]
   }
 }
