@@ -318,32 +318,6 @@ async def list_ab_tests(
     return [ABTestResult(**t) for t in tests[:limit]]
 
 
-@router.get("/ab-tests/{test_id}", response_model=ABTestResult)
-async def get_ab_test(test_id: int):
-    """Get a specific A/B test."""
-    if test_id not in _ab_tests:
-        raise HTTPException(status_code=404, detail="A/B test not found")
-
-    return ABTestResult(**_ab_tests[test_id])
-
-
-@router.put("/ab-tests/{test_id}", response_model=ABTestResult)
-async def update_ab_test(test_id: int, update: ABTestUpdate):
-    """Record the winner of an A/B test."""
-    if test_id not in _ab_tests:
-        raise HTTPException(status_code=404, detail="A/B test not found")
-
-    test = _ab_tests[test_id]
-    if test["winner"] is not None:
-        raise HTTPException(status_code=400, detail="A/B test already has a winner")
-
-    test["winner"] = update.winner
-    test["winner_reason"] = update.winner_reason
-    test["decided_at"] = datetime.utcnow()
-
-    return ABTestResult(**test)
-
-
 @router.get("/ab-tests/stats", response_model=ABTestStats)
 async def get_ab_test_stats():
     """Get A/B test statistics."""
@@ -375,6 +349,32 @@ async def get_ab_test_stats():
         undecided_tests=total - decided_count,
         avg_decision_time_hours=round(avg_decision_time, 1) if avg_decision_time else None,
     )
+
+
+@router.get("/ab-tests/{test_id}", response_model=ABTestResult)
+async def get_ab_test(test_id: int):
+    """Get a specific A/B test."""
+    if test_id not in _ab_tests:
+        raise HTTPException(status_code=404, detail="A/B test not found")
+
+    return ABTestResult(**_ab_tests[test_id])
+
+
+@router.put("/ab-tests/{test_id}", response_model=ABTestResult)
+async def update_ab_test(test_id: int, update: ABTestUpdate):
+    """Record the winner of an A/B test."""
+    if test_id not in _ab_tests:
+        raise HTTPException(status_code=404, detail="A/B test not found")
+
+    test = _ab_tests[test_id]
+    if test["winner"] is not None:
+        raise HTTPException(status_code=400, detail="A/B test already has a winner")
+
+    test["winner"] = update.winner
+    test["winner_reason"] = update.winner_reason
+    test["decided_at"] = datetime.utcnow()
+
+    return ABTestResult(**test)
 
 
 @router.delete("/ab-tests/{test_id}")
